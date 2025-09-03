@@ -24,6 +24,29 @@ async function ensureProcessorInitialized() {
 }
 
 /**
+ * Helper function to convert base64 to Uint8Array (Workers-compatible)
+ */
+function base64ToUint8Array(base64: string): Uint8Array {
+  const binaryString = atob(base64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
+
+/**
+ * Helper function to convert Uint8Array to base64 (Workers-compatible)
+ */
+function uint8ArrayToBase64(bytes: Uint8Array): string {
+  let binaryString = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binaryString += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binaryString);
+}
+
+/**
  * Process encrypted mental health assessment
  * POST /ml/assess-encrypted
  */
@@ -41,25 +64,25 @@ mlRouter.post("/assess-encrypted", async (c) => {
       );
     }
 
-    // Convert base64 encoded data back to Uint8Array
+    // Convert base64 encoded data back to Uint8Array using Workers-compatible methods
     const input = {
       encryptedResponses: body.encryptedResponses.map((response: string) => 
-        new Uint8Array(Buffer.from(response, 'base64'))
+        base64ToUint8Array(response)
       ),
       encryptedMetadata: {
-        timestamp: new Uint8Array(Buffer.from(body.encryptedMetadata?.timestamp || "", 'base64')),
-        questionCount: new Uint8Array(Buffer.from(body.encryptedMetadata?.questionCount || "", 'base64')),
+        timestamp: base64ToUint8Array(body.encryptedMetadata?.timestamp || ""),
+        questionCount: base64ToUint8Array(body.encryptedMetadata?.questionCount || ""),
       },
-      publicKey: new Uint8Array(Buffer.from(body.publicKey, 'base64')),
+      publicKey: base64ToUint8Array(body.publicKey),
     };
 
     // Process encrypted questionnaire through ML model
     const result = await homomorphicMLProcessor.processEncryptedQuestionnaire(input);
 
-    // Convert result back to base64 for JSON transmission
+    // Convert result back to base64 for JSON transmission using Workers-compatible methods
     const response = {
-      encryptedDepressionLevel: Buffer.from(result.encryptedDepressionLevel).toString('base64'),
-      encryptedConfidenceScore: Buffer.from(result.encryptedConfidenceScore).toString('base64'),
+      encryptedDepressionLevel: uint8ArrayToBase64(result.encryptedDepressionLevel),
+      encryptedConfidenceScore: uint8ArrayToBase64(result.encryptedConfidenceScore),
       processedAt: new Date().toISOString(),
     };
 
