@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { authRouter } from "./auth";
+import { mlRouter } from "./routes/ml";
 import { auth } from "./auth";
 import { HonoEnv } from "./definitions/common.types";
 import { ApiResponse } from "./helpers/api-response";
@@ -50,6 +51,7 @@ app.use("*", async (c, next) => {
 });
 
 app.route("/", authRouter);
+app.route("/ml", mlRouter);
 
 app.get("/", (c) => {
   return c.text("Hello Hono!");
